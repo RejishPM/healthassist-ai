@@ -1,0 +1,62 @@
+﻿Work Item Type,Title 1,Title 2
+Feature,Project Foundation & Core Architecture,
+User Story,,Set up Python project structure and dependency management
+User Story,,Configure application settings and environment variables
+User Story,,"Define modular architecture for ingestion, retrieval, LLM and workflow layers"
+User Story,,Set up Git repository conventions and development documentation
+Feature,Healthcare Document Ingestion,
+User Story,,Load healthcare PDF documents from local storage
+User Story,,Add document ingestion from Amazon S3
+User Story,,Extract and normalize text from uploaded documents
+User Story,,Capture source document metadata during ingestion
+User Story,,"Handle invalid, duplicate and unsupported documents"
+Feature,Document Chunking & Metadata Management,
+User Story,,Implement configurable text chunking strategy
+User Story,,"Attach source, page, version and document metadata to chunks"
+User Story,,Support document versioning and soft archival
+User Story,,Validate chunk quality before embedding
+Feature,Embeddings & PGVector Vector Store,
+User Story,,Generate embeddings for document chunks
+User Story,,Configure PostgreSQL with PGVector
+User Story,,Store embeddings and metadata in PGVector
+User Story,,Implement vector index creation and maintenance
+User Story,,Support re-indexing when documents are updated
+Feature,RAG Retrieval & Context Assembly,
+User Story,,Implement semantic similarity search
+User Story,,Configure top-k retrieval
+User Story,,Filter retrieval results using metadata
+User Story,,Assemble retrieved chunks into LLM context
+User Story,,Return document sources with retrieved evidence
+Feature,Amazon Bedrock Answer Generation,
+User Story,,Configure authenticated Amazon Bedrock client
+User Story,,Create healthcare RAG prompt template
+User Story,,Generate grounded answers using retrieved context
+User Story,,Return answer with source citations
+User Story,,Implement no-answer fallback when evidence is insufficient
+Feature,Agentic AI Workflow with LangGraph,
+User Story,,Create LangGraph workflow foundation
+User Story,,Implement planner agent
+User Story,,Implement retriever agent
+User Story,,Implement medical knowledge reasoning step
+User Story,,Implement compliance review step
+User Story,,Implement response generation step
+Feature,"Human-in-the-Loop, Compliance & Governance",
+User Story,,Define high-impact request classification rules
+User Story,,Route high-impact responses for human approval
+User Story,,Record approval and rejection decisions
+User Story,,Add audit trail for workflow decisions
+User Story,,Implement healthcare safety and compliance checks
+Feature,"Evaluation, Guardrails & Observability",
+User Story,,Create RAG evaluation question set
+User Story,,Measure retrieval relevance and answer groundedness
+User Story,,Add hallucination and unsupported-answer guardrails
+User Story,,"Log retrieved chunks, prompts and responses"
+User Story,,Add application metrics and tracing
+Feature,"Containerization, AWS Deployment & DevOps",
+User Story,,Containerize HealthAssist services with Docker
+User Story,,Create local Docker Compose environment
+User Story,,Prepare AWS infrastructure architecture
+User Story,,Deploy application workloads to Amazon EKS
+User Story,,Provision infrastructure using Terraform
+User Story,,Create CI/CD workflow using GitHub Actions
+User Story,,Configure CloudWatch logging and monitoring
