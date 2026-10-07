@@ -1,0 +1,25 @@
+# PDF extraction
+pymupdf
+
+# Environment variables
+python-dotenv
+
+# API layer
+fastapi
+uvicorn[standard]
+
+# Data validation / models
+pydantic
+
+# PostgreSQL
+psycopg[binary,pool]
+
+# Vector database support
+pgvector
+
+# AWS / Bedrock
+boto3
+
+# Agent orchestration
+langgraph
+langchain-core
