@@ -144,7 +144,7 @@ async def persist_pdf_chunks(
             )
             await insert_ollama_embeddings(
                 connection,
-                document_chunk_ids=document_chunk_ids,
+                document_chunk_ids=chunk_ids,
                 embeddings=embeddings,
                 model=embedder.model,
             )
