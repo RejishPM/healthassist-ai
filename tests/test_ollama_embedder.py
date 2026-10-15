@@ -14,13 +14,16 @@ class OllamaEmbedderTests(unittest.TestCase):
         self.assertEqual(embedder.get_embedding("care"), [0.1, 0.2])
         post.assert_called_once_with(
             "http://localhost:11434/api/embeddings",
-            json={"model": "nomic-embed-text", "prompt": "care"}, timeout=60,
+            json={"model": "nomic-embed-text", "prompt": "care"},
+            timeout=60,
         )
         post.return_value.raise_for_status.assert_called_once_with()
 
     @patch("app.embedding.ollama_embedder.requests.post")
     def test_http_failure_propagates(self, post):
-        post.return_value.raise_for_status.side_effect = requests.HTTPError("unavailable")
+        post.return_value.raise_for_status.side_effect = requests.HTTPError(
+            "unavailable"
+        )
         with self.assertRaises(requests.HTTPError):
             OllamaEmbedder().get_embedding("care")
         post.return_value.json.assert_not_called()
@@ -29,3 +32,12 @@ class OllamaEmbedderTests(unittest.TestCase):
     def test_timeout_propagates(self, post):
         with self.assertRaises(requests.Timeout):
             OllamaEmbedder().get_embedding("care")
+
+
+class MalformedEmbeddingTests(unittest.TestCase):
+    @patch("app.embedding.ollama_embedder.requests.post")
+    def test_malformed_embedding_envelopes_fail_cleanly(self, post):
+        for data in ([], {}, None):
+            post.return_value.json.return_value = data
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                OllamaEmbedder().get_embedding("care")

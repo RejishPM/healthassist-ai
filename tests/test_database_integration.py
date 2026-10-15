@@ -85,6 +85,98 @@ class DatabaseIntegrationTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(await cursor.fetchone(), (0,))
 
+    async def test_pdf_api_to_database_to_cited_answer(self):
+        import json
+        from unittest.mock import Mock
+        import httpx
+        from app.main import create_app
+        from app.settings import Settings
+        from tests.test_rag import sample_pdf
+
+        await self.connection.execute(SCHEMA_SQL)
+        app = create_app(Settings())
+
+        def ollama_response(url, **kwargs):
+            response = Mock()
+            if url.endswith("/api/embeddings"):
+                # Only the known-answer query shares the document vector.
+                if "unknown planet" in kwargs["json"]["prompt"]:
+                    vector = [0.0, 1.0] + [0.0] * 766
+                else:
+                    vector = [1.0] + [0.0] * 767
+                response.json.return_value = {"embedding": vector}
+            else:
+                payload = json.loads(kwargs["json"]["messages"][1]["content"])
+                response.json.return_value = {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "quotes": [
+                                    {
+                                        "source_id": 1,
+                                        "quote": payload["sources"][0]["text"],
+                                    }
+                                ]
+                            }
+                        )
+                    }
+                }
+            return response
+
+        with patch.object(vector_store, "pool", ConnectionPool(self.connection)), patch(
+            "requests.post", side_effect=ollama_response
+        ) as provider:
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                ids = []
+                for _ in range(2):
+                    upload = await client.post(
+                        "/documents?file_name=guide.pdf&version=v1",
+                        content=sample_pdf(),
+                        headers={"content-type": "application/pdf"},
+                    )
+                    self.assertEqual(upload.status_code, 201, upload.text)
+                    ids.append(upload.json()["document_id"])
+                self.assertNotEqual(*ids)
+                answer = await client.post(
+                    "/questions", json={"question": "When does the Cedar clinic open?"}
+                )
+                self.assertEqual(answer.status_code, 200, answer.text)
+                body = answer.json()
+                self.assertEqual(body["status"], "answered")
+                self.assertEqual(body["citations"][0]["file_name"], "guide.pdf")
+                self.assertEqual(body["citations"][0]["page"], 1)
+                self.assertIn(body["citations"][0]["document_id"], ids)
+                self.assertIn("nine", body["answer"])
+                previous_chat_calls = len(
+                    [
+                        call
+                        for call in provider.call_args_list
+                        if call.args[0].endswith("/api/chat")
+                    ]
+                )
+                absent = await client.post(
+                    "/questions", json={"question": "Describe an unknown planet"}
+                )
+                self.assertEqual(absent.json()["status"], "no_relevant_context")
+                self.assertEqual(
+                    previous_chat_calls,
+                    len(
+                        [
+                            call
+                            for call in provider.call_args_list
+                            if call.args[0].endswith("/api/chat")
+                        ]
+                    ),
+                )
+                await self.connection.execute("UPDATE documents SET is_active = FALSE")
+                inactive = await client.post(
+                    "/questions", json={"question": "When does the Cedar clinic open?"}
+                )
+                self.assertEqual(inactive.json()["citations"], [])
+                self.assertEqual(inactive.json()["status"], "no_relevant_context")
+
     async def test_upgrade_preserves_documents_and_is_idempotent(self):
         await self.connection.execute(
             "CREATE TABLE documents (id BIGSERIAL PRIMARY KEY, file_name TEXT NOT NULL, "

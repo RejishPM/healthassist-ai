@@ -26,4 +26,6 @@ class OllamaEmbedder(Embedder):
 
         data = response.json()
 
+        if not isinstance(data, dict) or "embedding" not in data:
+            raise ValueError("Malformed Ollama embedding response")
         return data["embedding"]

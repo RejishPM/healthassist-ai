@@ -12,7 +12,13 @@ parameterized SQL, transactions, metadata, and existing public interfaces.
 Never commit credentials or clinical documents, call paid APIs, or deploy resources
 without explicit authorization. Mock PostgreSQL and Ollama in unit tests.
 
-Python 3.12: `python -m pip install -r requirements.txt`.
+Python 3.12: `python -m pip install -r requirements-dev.txt -c constraints.txt`.
+The FastAPI entry point is `app/main.py`; `app/rag.py` composes existing modules,
+and `app/generation/ollama.py` enforces structured local evidence selection.
+Keep server-verified quotations/citations and explicit no-evidence behavior.
+The API supports local Ollama only; never silently fall back to paid providers.
+See `README.md` for the reproducible local demo and `python -m scripts.demo
+--mock-ollama` for a clearly labeled deterministic HTTP/PostgreSQL smoke check.
 Run offline tests with `python -m unittest discover -s tests -v`.
 `test_embedding.py` at the repository root is a live provider demo, not an offline
 unit test; do not run it as part of discovery.

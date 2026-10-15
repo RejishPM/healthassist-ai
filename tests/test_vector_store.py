@@ -271,5 +271,35 @@ class RegressionTests(unittest.IsolatedAsyncioTestCase):
                 query="care", embedder=FakeEmbedder()), [])
 
 
+class VectorValidationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_invalid_vectors_fail_before_database_access(self):
+        for vector in (
+            None,
+            {},
+            [1.0],
+            [0.0] * 768,
+            [float("nan")] * 768,
+            [float("inf")] * 768,
+            [True] * 768,
+            ["1"] * 768,
+        ):
+            with self.subTest(vector=type(vector).__name__):
+                embedder = Mock(model="test")
+                embedder.get_embedding.return_value = vector
+                with patch.object(vector_store, "pool") as pool:
+                    with self.assertRaisesRegex(ValueError, "768-dimensional"):
+                        await vector_store.search_similar_chunks(
+                            query="care", embedder=embedder
+                        )
+                    with self.assertRaisesRegex(ValueError, "768-dimensional"):
+                        await vector_store.persist_pdf_chunks(
+                            file_name="test.pdf",
+                            title=None,
+                            chunks=[{"text": "care"}],
+                            embedder=embedder,
+                        )
+                    pool.connection.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

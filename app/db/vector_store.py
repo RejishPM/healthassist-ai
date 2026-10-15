@@ -1,4 +1,5 @@
 import asyncio
+import math
 from typing import Any, Sequence
 
 from pgvector.psycopg import register_vector_async
@@ -8,6 +9,22 @@ from app.embedding.ollama_embedder import OllamaEmbedder
 from app.query.retrieval_result import RetrievalResult
 
 from .connection import pool
+
+
+def validate_embedding(embedding: Sequence[float]) -> None:
+    """The stored Ollama schema requires finite, nonzero 768-D vectors."""
+    if (
+        not isinstance(embedding, (list, tuple))
+        or len(embedding) != 768
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (float, int))
+            or not math.isfinite(value)
+            for value in embedding
+        )
+        or not any(embedding)
+    ):
+        raise ValueError("Expected a finite, nonzero 768-dimensional embedding")
 
 
 async def insert_document(
@@ -127,6 +144,9 @@ async def persist_pdf_chunks(
         for chunk in chunks
     ]
 
+    for embedding in embeddings:
+        validate_embedding(embedding)
+
     async with pool.connection() as connection:
         await register_vector_async(connection)
 
@@ -169,6 +189,8 @@ async def search_similar_chunks(
         embedder.get_embedding,
         query.strip(),
     )
+
+    validate_embedding(query_embedding)
 
     async with pool.connection() as connection:
         await register_vector_async(connection)
