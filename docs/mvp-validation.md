@@ -95,3 +95,119 @@ CI now runs constrained installs, unit tests, PostgreSQL integration, and the
 mock-provider HTTP demo. These are configured checks, not evidence of a hosted
 successful run. Verify the latest hosted jobs and complete real-model validation
 before approving the MVP for merge. No merge or deployment was performed.
+
+
+## Real Ollama validation retry — 2026-10-15
+
+This retry started from `2475b1c` on `fix/rag-foundation-20261014`.
+Only documentation was changed. The existing local Compose services were started;
+no cloud resources were deployed, and no paid APIs or mock fallback were used.
+
+### Connectivity and exact download failure
+
+`GET http://127.0.0.1:11435/api/version` succeeded:
+
+```json
+{"version":"0.6.8"}
+```
+
+`GET /api/tags` returned `{"models":[]}`. `ollama list` printed only its header:
+
+```text
+NAME    ID    SIZE    MODIFIED
+```
+
+Neither requested model is installed, so there are **no model IDs to report**.
+Both real download commands were executed with the local CLI host explicitly set:
+
+```bash
+docker compose exec -T -e OLLAMA_HOST=http://127.0.0.1:11434 ollama ollama pull nomic-embed-text
+docker compose exec -T -e OLLAMA_HOST=http://127.0.0.1:11434 ollama ollama pull qwen2.5:0.5b
+```
+
+Both exited 1 with these observed errors:
+
+```text
+Error: pull model manifest: Get "https://registry.ollama.ai/v2/library/nomic-embed-text/manifests/latest": Forbidden
+Error: pull model manifest: Get "https://registry.ollama.ai/v2/library/qwen2.5/manifests/0.5b": Forbidden
+```
+
+A direct HTTPS request confirmed the precise failure: the HTTPS proxy rejected
+CONNECT to **`registry.ollama.ai:443`**, before establishing a TLS connection to
+the registry. `curl` exited 56 and reported:
+
+```text
+HTTP/1.1 403 Forbidden
+content-length: 16
+content-type: text/plain
+server: envoy
+connection: close
+
+curl: (56) CONNECT tunnel failed, response 403
+```
+
+The curl target HTTP status was `000` because the tunnel was never established;
+the **proxy CONNECT response** was 403. No model blob redirect was reached, so
+there is no evidence of any additional blocked blob hostname. TLS verification
+and model integrity checks were left enabled.
+
+### Real demo and independent checks
+
+Schema initialization succeeded, followed by the actual, unmocked command:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11435 \
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text \
+OLLAMA_CHAT_MODEL=qwen2.5:0.5b \
+python -m scripts.demo
+```
+
+`DATABASE_URL` pointed at the disposable local Compose demo database. The command
+printed `LOCAL OLLAMA DEMO: requires downloaded embedding and chat models`, then
+exited **1** because `/documents` returned **HTTP 502**. Direct provider probes
+confirmed why:
+
+```text
+POST /api/embeddings -> HTTP 404
+{"error":"model \"nomic-embed-text\" not found, try pulling it first"}
+POST /api/chat -> HTTP 404
+{"error":"model \"qwen2.5:0.5b\" not found, try pulling it first"}
+```
+
+The real demo did not generate embeddings or reach question answering. Actual
+semantic retrieval, source quotations/citations, and both no-context and
+insufficient-evidence abstention therefore remain **unverified with real models**.
+The error was not converted into an abstention or silently replaced by mock output.
+
+The database contained only the two retained `demo-mock-768` vectors (768 dimensions),
+not real `nomic-embed-text` embeddings. These existing fixture vectors are excluded
+by the real-model retrieval filter and are not counted as successful validation.
+
+The independent test suite was rerun with a real PostgreSQL/pgvector connection:
+
+```text
+Ran 49 tests in 0.470s
+OK
+```
+
+All 49 passed, zero skipped, including four database integration tests. These
+tests mock Ollama, as documented; they do not resolve the real-model blocker.
+
+### PR evidence and readiness decision
+
+GitHub PR API access also failed: `gh pr view 1` returned `Forbidden`, and a direct
+HTTPS probe to `api.github.com:443` received the same Envoy CONNECT 403. Hosted CI
+and PR metadata remain unverified. The documentation is committed to the PR's
+existing feature branch; posting a separate PR comment requires working API access.
+
+The environment configuration already lists both `registry.ollama.ai` and
+`api.github.com`, but the current runtime proxy still denies them. Restore runtime
+HTTPS CONNECT access to those hosts rather than repeatedly adding duplicate rules.
+Then retry both model downloads, inspect any newly observable blob-host denial,
+record the installed model IDs, and run the real demo plus relevant/irrelevant
+question and abstention checks. No assertions about real model quality can be made
+from the successful mocked test suite.
+
+**Recommendation: not ready for human merge approval.** The code can be reviewed,
+but real-model grounding and abstention validation and the latest hosted CI results
+are still outstanding. `main` is unchanged; no merge or deployment was performed.
