@@ -2,7 +2,9 @@
 
 ## Current Phase
 
-RAG foundation and persistence layer.
+Local RAG MVP implemented; real-model demo validation is blocked by model-registry network access.
+See `README.md` for usage and `docs/mvp-validation.md` for actual results.
+The sections below record the earlier foundation phase.
 
 ## Completed / Reviewed
 

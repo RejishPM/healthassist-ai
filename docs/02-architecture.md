@@ -77,7 +77,7 @@ Responsibilities:
 
 ### Retrieval Layer
 
-Status: Next implementation stage
+Status: Implemented for the local RAG MVP (see `README.md`).
 
 Responsibilities will include:
 
@@ -86,3 +86,13 @@ Responsibilities will include:
 - Retrieve Top-K document chunks
 - Return source and page metadata
 - Later support hybrid semantic + keyword retrieval
+
+## RAG MVP API
+
+`app/main.py` manages the PostgreSQL pool and validates HTTP inputs.
+`POST /documents` calls `app/rag.py`, which extracts/chunks uploaded PDFs and uses
+the existing transactional vector store. `POST /questions` validates the question,
+retrieves compatible active-document vectors, and calls local Ollama through
+`app/generation/ollama.py`. The model selects quotations; the server verifies
+them and builds citations from retrieved metadata. No context bypasses generation.
+This MVP does not require LangGraph, paid providers, or a new storage abstraction.

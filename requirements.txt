@@ -23,3 +23,6 @@ boto3
 # Agent orchestration
 langgraph
 langchain-core
+
+# Ollama HTTP client
+requests

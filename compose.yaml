@@ -1,0 +1,30 @@
+# Local demo services only. No cloud resources and no externally published ports.
+name: healthassist-demo
+services:
+  db:
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    environment:
+      POSTGRES_USER: healthassist
+      POSTGRES_PASSWORD: demo-only-password
+      POSTGRES_DB: healthassist
+    ports:
+      - '127.0.0.1:55433:5432'
+    volumes:
+      - demo-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U healthassist -d healthassist']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  ollama:
+    image: ollama/ollama:0.6.8@sha256:50ab2378567a62b811a2967759dd91f254864c3495cbe50576bd8a85bc6edd56
+    profiles: [llm]
+    environment:
+      OLLAMA_NUM_PARALLEL: '1'
+    ports:
+      - '127.0.0.1:11435:11434'
+    volumes:
+      - demo-models:/root/.ollama
+volumes:
+  demo-db:
+  demo-models:
