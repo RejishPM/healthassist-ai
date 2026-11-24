@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS documents (
     file_name TEXT NOT NULL,
     title TEXT,
     version TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -38,3 +39,5 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id
 
 CREATE INDEX IF NOT EXISTS idx_document_chunks_metadata
     ON document_chunks USING GIN(metadata);
+-- Upgrade previously initialized databases as well.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;

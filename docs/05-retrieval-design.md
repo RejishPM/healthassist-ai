@@ -1,5 +1,10 @@
 # HealthAssist Retrieval Design
 
+Implementation update: the local MVP now exposes ingestion and question-answering
+APIs with active-document semantic retrieval and verified extractive citations.
+See `README.md` and `docs/mvp-validation.md`; the planning/status notes below
+are retained as design history, not current runtime evidence.
+
 ## 1. Purpose
 
 The retrieval layer is responsible for finding the most relevant approved clinical evidence for a user question.

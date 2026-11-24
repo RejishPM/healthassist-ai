@@ -211,6 +211,13 @@ def chunk_blocks(
         if not text:
             continue
 
+        # A citation has one page/source. Never merge prose across either boundary.
+        if prose_metadata is not None and (
+            block["page"] != prose_metadata["page"]
+            or block["source"] != prose_metadata["source"]
+        ):
+            flush_prose()
+
         block_type = block["content_type"]
 
         # --------------------------------------------------
